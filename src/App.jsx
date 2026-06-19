@@ -95,6 +95,136 @@ function Field({ label, children, full }) {
   );
 }
 
+function productSuggested(form) {
+  const base = num(form.custo) + num(form.custos_variaveis) + num(form.frete);
+  const margin = Math.min(99, Math.max(0, num(form.margem_desejada)));
+  return margin >= 100 ? 0 : base / (1 - margin / 100);
+}
+
+function realMargin(form) {
+  const price = num(form.preco_final);
+  if (!price) return 0;
+  const base = num(form.custo) + num(form.custos_variaveis) + num(form.frete);
+  return ((price - base) / price) * 100;
+}
+
+function PricingPage({ products, loadAll, setError, onDeleteProduct }) {
+  const [productForm, setProductForm] = useState(emptyProduct);
+  const [editingProduct, setEditingProduct] = useState(null);
+
+  async function uploadPhoto(file) {
+    if (!file) return productForm.foto_url || "";
+    const path = `${crypto.randomUUID()}-${file.name}`;
+    const up = await supabase.storage.from("produtos").upload(path, file);
+    if (up.error) throw up.error;
+    return supabase.storage.from("produtos").getPublicUrl(path).data.publicUrl;
+  }
+
+  async function saveProduct(e) {
+    e.preventDefault();
+    setError("");
+    try {
+      const file = e.currentTarget.foto.files?.[0];
+      const foto_url = await uploadPhoto(file);
+      const payload = {
+        ...productForm,
+        foto_url,
+        preco_sugerido: productSuggested(productForm),
+        custo: num(productForm.custo),
+        custos_variaveis: num(productForm.custos_variaveis),
+        frete: num(productForm.frete),
+        margem_desejada: num(productForm.margem_desejada),
+        preco_final: num(productForm.preco_final || productSuggested(productForm)),
+        estoque: Math.floor(num(productForm.estoque)),
+      };
+      const query = editingProduct
+        ? supabase.from("produtos").update(payload).eq("id", editingProduct)
+        : supabase.from("produtos").insert(payload);
+      const { error: err } = await query;
+      if (err) throw err;
+      setProductForm(emptyProduct);
+      setEditingProduct(null);
+      await loadAll();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  return (
+    <section className="grid two-col">
+      <form className="card" onSubmit={saveProduct}>
+        <div className="toolbar">
+          <h2>{editingProduct ? "Editar produto" : "Novo produto"}</h2>
+          {editingProduct && (
+            <button className="btn" type="button" onClick={() => { setEditingProduct(null); setProductForm(emptyProduct); }}>
+              Cancelar edição
+            </button>
+          )}
+        </div>
+        <div className="form-grid">
+          <Field label="Nome do Produto">
+            <input value={productForm.nome} placeholder="Ex: Legging Cintura Alta" onChange={(e) => setProductForm({ ...productForm, nome: e.target.value })} required />
+          </Field>
+          <Field label="Categoria">
+            <input value={productForm.categoria || ""} placeholder="Fitness, Vestido..." onChange={(e) => setProductForm({ ...productForm, categoria: e.target.value })} />
+          </Field>
+          <Field label="Foto do Produto" full>
+            <input name="foto" type="file" accept="image/*" />
+          </Field>
+          {["custo", "custos_variaveis", "frete", "margem_desejada"].map((k) => (
+            <Field key={k} label={{ custo: "Custo (R$)", custos_variaveis: "Custos Variáveis (R$)", frete: "Frete (R$)", margem_desejada: "Margem Desejada (%)" }[k]}>
+              <input type="number" step="0.01" value={productForm[k]} onChange={(e) => setProductForm({ ...productForm, [k]: e.target.value })} />
+            </Field>
+          ))}
+          <Field label="Preço Sugerido">
+            <input readOnly value={fmtMoney(productSuggested(productForm))} />
+          </Field>
+          <Field label="Preço Final">
+            <input type="number" step="0.01" value={productForm.preco_final} onChange={(e) => setProductForm({ ...productForm, preco_final: e.target.value })} />
+          </Field>
+          <Field label="Estoque Inicial">
+            <input type="number" value={productForm.estoque} onChange={(e) => setProductForm({ ...productForm, estoque: e.target.value })} />
+          </Field>
+          <Field label="Tamanhos / Variações">
+            <input value={productForm.tamanhos || ""} onChange={(e) => setProductForm({ ...productForm, tamanhos: e.target.value })} />
+          </Field>
+          <Field label="Descrição / Observações" full>
+            <textarea value={productForm.descricao || ""} onChange={(e) => setProductForm({ ...productForm, descricao: e.target.value })} />
+          </Field>
+        </div>
+        <p className="muted">Margem real estimada: <strong>{realMargin(productForm).toFixed(1)}%</strong></p>
+        <button className="btn primary full" type="submit">{editingProduct ? "Salvar alterações" : "Cadastrar produto"}</button>
+      </form>
+      <div className="card">
+        <h2>Produtos cadastrados ({products.length})</h2>
+        {products.length ? (
+          <div className="list">
+            {products.map((p) => (
+              <div className="list-row" key={p.id}>
+                {p.foto_url && <img className="thumb" src={p.foto_url} alt="" />}
+                <div>
+                  <strong>{p.nome}</strong>
+                  <p className="muted">{p.categoria || "Sem categoria"} - {fmtMoney(p.preco_final)} - estoque {p.estoque}</p>
+                </div>
+                <div className="icon-actions">
+                  <IconButton title="Editar" onClick={() => { setEditingProduct(p.id); setProductForm({ ...emptyProduct, ...p }); }}>
+                    <Pencil />
+                  </IconButton>
+                  <IconButton danger title="Excluir" onClick={() => onDeleteProduct(p.id)}>
+                    <Trash2 />
+                  </IconButton>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="empty">Nenhum produto cadastrado.</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function App() {
   const [active, setActive] = useState("dashboard");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -109,8 +239,6 @@ export default function App() {
   const [settings, setSettings] = useState(emptySettings);
   const [modal, setModal] = useState(null);
   const [chartMode, setChartMode] = useState("Dia");
-  const [productForm, setProductForm] = useState(emptyProduct);
-  const [editingProduct, setEditingProduct] = useState(null);
   const [clientForm, setClientForm] = useState(emptyClient);
   const [editingClient, setEditingClient] = useState(null);
   const [goalForm, setGoalForm] = useState(emptyGoal);
@@ -196,57 +324,6 @@ export default function App() {
       Dinheiro: "taxa_dinheiro",
     }[method];
     return num(settings[key]);
-  }
-
-  function productSuggested(form = productForm) {
-    const base = num(form.custo) + num(form.custos_variaveis) + num(form.frete);
-    const margin = Math.min(99, Math.max(0, num(form.margem_desejada)));
-    return margin >= 100 ? 0 : base / (1 - margin / 100);
-  }
-
-  function realMargin(form = productForm) {
-    const price = num(form.preco_final);
-    if (!price) return 0;
-    const base = num(form.custo) + num(form.custos_variaveis) + num(form.frete);
-    return ((price - base) / price) * 100;
-  }
-
-  async function uploadPhoto(file) {
-    if (!file) return productForm.foto_url || "";
-    const path = `${crypto.randomUUID()}-${file.name}`;
-    const up = await supabase.storage.from("produtos").upload(path, file);
-    if (up.error) throw up.error;
-    return supabase.storage.from("produtos").getPublicUrl(path).data.publicUrl;
-  }
-
-  async function saveProduct(e) {
-    e.preventDefault();
-    setError("");
-    try {
-      const file = e.currentTarget.foto.files?.[0];
-      const foto_url = await uploadPhoto(file);
-      const payload = {
-        ...productForm,
-        foto_url,
-        preco_sugerido: productSuggested(productForm),
-        custo: num(productForm.custo),
-        custos_variaveis: num(productForm.custos_variaveis),
-        frete: num(productForm.frete),
-        margem_desejada: num(productForm.margem_desejada),
-        preco_final: num(productForm.preco_final || productSuggested(productForm)),
-        estoque: Math.floor(num(productForm.estoque)),
-      };
-      const query = editingProduct
-        ? supabase.from("produtos").update(payload).eq("id", editingProduct)
-        : supabase.from("produtos").insert(payload);
-      const { error: err } = await query;
-      if (err) throw err;
-      setProductForm(emptyProduct);
-      setEditingProduct(null);
-      await loadAll();
-    } catch (err) {
-      setError(err.message);
-    }
   }
 
   async function deleteRow(table, id) {
@@ -450,7 +527,7 @@ export default function App() {
   return (
     <Shell>
       {active === "dashboard" && <Dashboard />}
-      {active === "pricing" && <Pricing />}
+      {active === "pricing" && <PricingPage products={products} loadAll={loadAll} setError={setError} onDeleteProduct={(id) => deleteRow("produtos", id)} />}
       {active === "stock" && <Stock />}
       {active === "clients" && <Clients />}
       {active === "goals" && <Goals />}
@@ -495,41 +572,6 @@ export default function App() {
 
   function Segment({ value, setValue, options }) {
     return <div className="segmented">{options.map((o) => <button key={o} className={value === o ? "active" : ""} onClick={() => setValue(o)}>{o}</button>)}</div>;
-  }
-
-  function Pricing() {
-    return (
-      <section className="grid two-col">
-        <form className="card" onSubmit={saveProduct}>
-          <div className="toolbar"><h2>{editingProduct ? "Editar produto" : "Novo produto"}</h2>{editingProduct && <button className="btn" type="button" onClick={() => { setEditingProduct(null); setProductForm(emptyProduct); }}>Cancelar edição</button>}</div>
-          <ProductFields />
-          <p className="muted">Margem real estimada: <strong>{realMargin().toFixed(1)}%</strong></p>
-          <button className="btn primary full" type="submit">{editingProduct ? "Salvar alterações" : "Cadastrar produto"}</button>
-        </form>
-        <div className="card"><h2>Produtos cadastrados ({products.length})</h2><ProductList /></div>
-      </section>
-    );
-  }
-
-  function ProductFields() {
-    return (
-      <div className="form-grid">
-        <Field label="Nome do Produto"><input value={productForm.nome} placeholder="Ex: Legging Cintura Alta" onChange={(e) => setProductForm({ ...productForm, nome: e.target.value })} required /></Field>
-        <Field label="Categoria"><input value={productForm.categoria || ""} placeholder="Fitness, Vestido..." onChange={(e) => setProductForm({ ...productForm, categoria: e.target.value })} /></Field>
-        <Field label="Foto do Produto" full><input name="foto" type="file" accept="image/*" /></Field>
-        {["custo", "custos_variaveis", "frete", "margem_desejada"].map((k) => <Field key={k} label={{ custo: "Custo (R$)", custos_variaveis: "Custos Variáveis (R$)", frete: "Frete (R$)", margem_desejada: "Margem Desejada (%)" }[k]}><input type="number" step="0.01" value={productForm[k]} onChange={(e) => setProductForm({ ...productForm, [k]: e.target.value })} /></Field>)}
-        <Field label="Preço Sugerido"><input readOnly value={fmtMoney(productSuggested())} /></Field>
-        <Field label="Preço Final"><input type="number" step="0.01" value={productForm.preco_final} onChange={(e) => setProductForm({ ...productForm, preco_final: e.target.value })} /></Field>
-        <Field label="Estoque Inicial"><input type="number" value={productForm.estoque} onChange={(e) => setProductForm({ ...productForm, estoque: e.target.value })} /></Field>
-        <Field label="Tamanhos / Variações"><input value={productForm.tamanhos || ""} onChange={(e) => setProductForm({ ...productForm, tamanhos: e.target.value })} /></Field>
-        <Field label="Descrição / Observações" full><textarea value={productForm.descricao || ""} onChange={(e) => setProductForm({ ...productForm, descricao: e.target.value })} /></Field>
-      </div>
-    );
-  }
-
-  function ProductList() {
-    if (!products.length) return <p className="empty">Nenhum produto cadastrado.</p>;
-    return <div className="list">{products.map((p) => <div className="list-row" key={p.id}>{p.foto_url && <img className="thumb" src={p.foto_url} alt="" />}<div><strong>{p.nome}</strong><p className="muted">{p.categoria || "Sem categoria"} - {fmtMoney(p.preco_final)} - estoque {p.estoque}</p></div><div className="icon-actions"><IconButton title="Editar" onClick={() => { setEditingProduct(p.id); setProductForm({ ...emptyProduct, ...p }); }}><Pencil /></IconButton><IconButton danger title="Excluir" onClick={() => deleteRow("produtos", p.id)}><Trash2 /></IconButton></div></div>)}</div>;
   }
 
   function Stock() {
