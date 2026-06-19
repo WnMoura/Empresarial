@@ -353,15 +353,15 @@ fig_breeds.add_trace(go.Bar(
 
 breeds_layout = {k: v for k, v in PLOT_LAYOUT.items() if k != "margin"}
 fig_breeds.update_layout(
-    **breeds_layout, height=420,
-    margin=dict(l=10, r=40, t=40, b=10),
+    **breeds_layout, height=500,
+    margin=dict(l=10, r=20, t=60, b=10),
     legend=dict(bgcolor="rgba(0,0,0,0)"),
 )
 fig_breeds.update_yaxes(autorange="reversed", row=1, col=1, gridcolor=COLORS["grid"])
 fig_breeds.update_yaxes(autorange="reversed", row=1, col=2, gridcolor=COLORS["grid"])
-fig_breeds.update_xaxes(title_text="Taxa de Adoção (%)", row=1, col=1, gridcolor=COLORS["grid"], range=[0, 100])
-fig_breeds.update_xaxes(title_text="Taxa de Adoção (%)", row=1, col=2, gridcolor=COLORS["grid"], range=[0, 100])
-fig_breeds.update_annotations(font=dict(size=14, color=COLORS["text"]))
+fig_breeds.update_xaxes(title_text="Taxa (%)", row=1, col=1, gridcolor=COLORS["grid"], range=[0, 115])
+fig_breeds.update_xaxes(title_text="Taxa (%)", row=1, col=2, gridcolor=COLORS["grid"], range=[0, 115])
+fig_breeds.update_annotations(font=dict(size=12, color=COLORS["text"]))
 
 donut_colors = [COLORS["accent_green"], COLORS["dog"], COLORS["accent_purple"],
                 COLORS["accent_red"], COLORS["text_dim"], COLORS["cat"]]
@@ -386,8 +386,12 @@ fig_outcomes.add_trace(go.Pie(
     insidetextorientation="auto",
 ), row=1, col=2)
 
-fig_outcomes.update_layout(**PLOT_LAYOUT, height=380, showlegend=False)
-fig_outcomes.update_annotations(font=dict(size=14, color=COLORS["text"]))
+fig_outcomes.update_layout(
+    **breeds_layout, height=400, showlegend=True,
+    legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5),
+    margin=dict(l=10, r=10, t=60, b=10)
+)
+fig_outcomes.update_annotations(font=dict(size=13, color=COLORS["text"]))
 
 fig_age = go.Figure()
 fig_age.add_trace(go.Bar(
@@ -405,10 +409,11 @@ fig_age.add_trace(go.Bar(
     textposition="outside",
 ))
 fig_age.update_layout(
-    **PLOT_LAYOUT, height=370, barmode="group",
-    xaxis=dict(gridcolor=COLORS["grid"]),
-    yaxis=dict(title="Taxa de Adoção (%)", gridcolor=COLORS["grid"], range=[0, 80]),
-    legend=dict(x=0.75, y=0.95),
+    **breeds_layout, height=400, barmode="group",
+    xaxis=dict(gridcolor=COLORS["grid"], tickangle=-45),
+    yaxis=dict(title="Taxa de Adoção (%)", gridcolor=COLORS["grid"], range=[0, 85]),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    margin=dict(l=10, r=10, t=40, b=40)
 )
 
 fig_neuter = go.Figure()
@@ -428,10 +433,11 @@ fig_neuter.add_trace(go.Bar(
     textposition="outside",
 ))
 fig_neuter.update_layout(
-    **PLOT_LAYOUT, height=370, barmode="group",
+    **breeds_layout, height=400, barmode="group",
     xaxis=dict(gridcolor=COLORS["grid"]),
-    yaxis=dict(title="Taxa de Adoção (%)", gridcolor=COLORS["grid"], range=[0, 100]),
-    legend=dict(x=0.65, y=0.95),
+    yaxis=dict(title="Taxa de Adoção (%)", gridcolor=COLORS["grid"], range=[0, 115]),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    margin=dict(l=10, r=10, t=40, b=20)
 )
 
 fig_health = go.Figure()
@@ -451,10 +457,11 @@ fig_health.add_trace(go.Bar(
     textposition="outside",
 ))
 fig_health.update_layout(
-    **PLOT_LAYOUT, height=370, barmode="group",
+    **breeds_layout, height=400, barmode="group",
     xaxis=dict(gridcolor=COLORS["grid"]),
-    yaxis=dict(title="Taxa de Adoção (%)", gridcolor=COLORS["grid"], range=[0, 100]),
-    legend=dict(x=0.65, y=0.95),
+    yaxis=dict(title="Taxa de Adoção (%)", gridcolor=COLORS["grid"], range=[0, 115]),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    margin=dict(l=10, r=10, t=40, b=20)
 )
 
 monthly = df_all[df_all["animal_type"].isin(["Dog", "Cat"])].copy()
