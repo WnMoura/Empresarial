@@ -135,6 +135,7 @@ export default function App() {
     if (!hasSupabaseEnv) {
       setLoading(false);
       setError("");
+      console.warn("Supabase não configurado: VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY ausentes.");
       return;
     }
     setLoading(true);
@@ -418,7 +419,7 @@ export default function App() {
   const manualCash = cash.filter((l) => String(l.data).startsWith(period));
   const cashBalance = dreRevenue + manualCash.filter((l) => l.tipo === "entrada").reduce((s, l) => s + num(l.valor), 0) - manualCash.filter((l) => l.tipo === "saída").reduce((s, l) => s + num(l.valor), 0);
 
-  function Shell({ children }) {
+  function renderShell({ children }) {
     return (
       <>
         <aside className={`sidebar ${menuOpen ? "open" : ""}`}>
@@ -447,73 +448,73 @@ export default function App() {
     );
   }
 
-  return Shell({
+  return renderShell({
     children: (
       <>
-        {active === "dashboard" && Dashboard()}
-        {active === "pricing" && Pricing()}
-        {active === "stock" && Stock()}
-        {active === "clients" && Clients()}
-        {active === "goals" && Goals()}
-        {active === "cash" && Cash()}
-        {active === "dre" && Dre()}
-        {active === "insights" && Insights()}
-        {active === "settings" && SettingsView()}
-        {modal === "sale" && SaleModal()}
-        {modal === "client" && ClientModal()}
-        {modal === "goal" && GoalModal()}
+        {active === "dashboard" && renderDashboard()}
+        {active === "pricing" && renderPricing()}
+        {active === "stock" && renderStock()}
+        {active === "clients" && renderClients()}
+        {active === "goals" && renderGoals()}
+        {active === "cash" && renderCash()}
+        {active === "dre" && renderDre()}
+        {active === "insights" && renderInsights()}
+        {active === "settings" && renderSettingsView()}
+        {modal === "sale" && renderSaleModal()}
+        {modal === "client" && renderClientModal()}
+        {modal === "goal" && renderGoalModal()}
       </>
     ),
   });
 
-  function Dashboard() {
+  function renderDashboard() {
     const bars = chartData();
     const max = Math.max(1, ...bars.map((b) => b.total));
     return (
       <div className="grid">
         <section className="grid metrics">
-          {Metric({ label: "Vendas do dia", value: `${todaySales.length} vendas`, sub: fmtMoney(totals.revenue) })}
-          {Metric({ label: "Valor em caixa (estoque)", value: fmtMoney(totals.stockValue), sub: `${products.length} produtos` })}
-          {Metric({ label: "Lucro bruto (dia)", value: fmtMoney(totals.gross), sub: "Receita - custo" })}
-          {Metric({ danger: true, label: "Lucro líquido (dia)", value: fmtMoney(totals.net), sub: `Taxas: ${fmtMoney(totals.fees)}` })}
+          {renderMetric({ label: "Vendas do dia", value: `${todaySales.length} vendas`, sub: fmtMoney(totals.revenue) })}
+          {renderMetric({ label: "Valor em caixa (estoque)", value: fmtMoney(totals.stockValue), sub: `${products.length} produtos` })}
+          {renderMetric({ label: "Lucro bruto (dia)", value: fmtMoney(totals.gross), sub: "Receita - custo" })}
+          {renderMetric({ danger: true, label: "Lucro líquido (dia)", value: fmtMoney(totals.net), sub: `Taxas: ${fmtMoney(totals.fees)}` })}
         </section>
         <section className="grid main-grid">
           <div className="card">
-            <div className="toolbar"><h2>Vendas por período</h2>{Segment({ value: chartMode, setValue: setChartMode, options: ["Dia", "Semana", "Mês"] })}</div>
+            <div className="toolbar"><h2>Vendas por período</h2>{renderSegment({ value: chartMode, setValue: setChartMode, options: ["Dia", "Semana", "Mês"] })}</div>
             <div className="chart" style={{ "--bars": bars.length }}>
               {bars.map((b) => <div className="bar-wrap" key={b.label}><div className="bar" data-tip={`${b.label} - ${fmtMoney(b.total)}`} style={{ height: `${Math.max(5, (b.total / max) * 100)}%` }} /><span className="bar-label">{b.label}</span></div>)}
             </div>
           </div>
           <div className="card"><h2>Formas de pagamento (hoje)</h2><div className="list">{paymentTotals.map((p) => <div className="list-row" key={p.method}><div><strong>{p.method}</strong><p className="muted">Taxa: {p.rate}%</p></div><strong>{fmtMoney(p.total)}</strong></div>)}</div></div>
         </section>
-        {SalesTable({ title: "Últimas vendas", rows: sales.slice(0, 10) })}
+        {renderSalesTable({ title: "Últimas vendas", rows: sales.slice(0, 10) })}
       </div>
     );
   }
 
-  function Metric({ label, value, sub, danger }) {
+  function renderMetric({ label, value, sub, danger }) {
     return <div className={`card metric-card ${danger ? "danger" : ""}`}><div className="metric-label">{label}</div><div className="metric-value">{value}</div><div className="metric-sub">{sub}</div></div>;
   }
 
-  function Segment({ value, setValue, options }) {
+  function renderSegment({ value, setValue, options }) {
     return <div className="segmented">{options.map((o) => <button key={o} className={value === o ? "active" : ""} onClick={() => setValue(o)}>{o}</button>)}</div>;
   }
 
-  function Pricing() {
+  function renderPricing() {
     return (
       <section className="grid two-col">
         <form className="card" onSubmit={saveProduct}>
           <div className="toolbar"><h2>{editingProduct ? "Editar produto" : "Novo produto"}</h2>{editingProduct && <button className="btn" type="button" onClick={() => { setEditingProduct(null); setProductForm(emptyProduct); }}>Cancelar edição</button>}</div>
-          {ProductFields()}
+          {renderProductFields()}
           <p className="muted">Margem real estimada: <strong>{realMargin().toFixed(1)}%</strong></p>
           <button className="btn primary full" type="submit">{editingProduct ? "Salvar alterações" : "Cadastrar produto"}</button>
         </form>
-        <div className="card"><h2>Produtos cadastrados ({products.length})</h2>{ProductList()}</div>
+        <div className="card"><h2>Produtos cadastrados ({products.length})</h2>{renderProductList()}</div>
       </section>
     );
   }
 
-  function ProductFields() {
+  function renderProductFields() {
     return (
       <div className="form-grid">
         <Field label="Nome do Produto"><input value={productForm.nome} placeholder="Ex: Legging Cintura Alta" onChange={(e) => setProductForm({ ...productForm, nome: e.target.value })} required /></Field>
@@ -529,12 +530,12 @@ export default function App() {
     );
   }
 
-  function ProductList() {
+  function renderProductList() {
     if (!products.length) return <p className="empty">Nenhum produto cadastrado.</p>;
     return <div className="list">{products.map((p) => <div className="list-row" key={p.id}>{p.foto_url && <img className="thumb" src={p.foto_url} alt="" />}<div><strong>{p.nome}</strong><p className="muted">{p.categoria || "Sem categoria"} - {fmtMoney(p.preco_final)} - estoque {p.estoque}</p></div><div className="icon-actions"><IconButton title="Editar" onClick={() => { setEditingProduct(p.id); setProductForm({ ...emptyProduct, ...p }); }}><Pencil /></IconButton><IconButton danger title="Excluir" onClick={() => deleteRow("produtos", p.id)}><Trash2 /></IconButton></div></div>)}</div>;
   }
 
-  function Stock() {
+  function renderStock() {
     const categories = [...new Set(products.map((p) => p.categoria).filter(Boolean))];
     return (
       <section className="grid two-col">
@@ -545,18 +546,18 @@ export default function App() {
             <select value={stockFilters.status} onChange={(e) => setStockFilters({ ...stockFilters, status: e.target.value })}><option value="">Todos status</option><option>Em estoque</option><option>Sem estoque</option><option>Estoque baixo</option></select>
             <select value={stockFilters.sort} onChange={(e) => setStockFilters({ ...stockFilters, sort: e.target.value })}><option value="nome">Nome</option><option value="estoque">Estoque</option></select>
           </div>
-          {ProductsTable({ rows: filteredProducts })}
+          {renderProductsTable({ rows: filteredProducts })}
         </div>
-        <div className="grid">{BestSellers()}{RecentSales({ small: true })}</div>
+        <div className="grid">{renderBestSellers()}{renderRecentSales({ small: true })}</div>
       </section>
     );
   }
 
-  function ProductsTable({ rows }) {
+  function renderProductsTable({ rows }) {
     return <div className="table-wrap"><table><thead><tr><th>Produto</th><th>Categoria</th><th>Preço</th><th>Estoque</th><th>Status</th></tr></thead><tbody>{rows.map((p) => <tr key={p.id}><td>{p.nome}</td><td>{p.categoria}</td><td>{fmtMoney(p.preco_final)}</td><td>{p.estoque}</td><td><span className="status-pill">{num(p.estoque) === 0 ? "Sem estoque" : num(p.estoque) <= 5 ? "Estoque baixo" : "Em estoque"}</span></td></tr>)}</tbody></table></div>;
   }
 
-  function SaleModal() {
+  function renderSaleModal() {
     const total = saleForm.itens.reduce((s, it) => s + it.quantidade * it.preco_unitario, 0);
     return (
       <Modal title="Nova venda" onClose={() => setModal(null)}>
@@ -577,51 +578,51 @@ export default function App() {
     );
   }
 
-  function Clients() {
+  function renderClients() {
     const filtered = clients.filter((c) => `${c.nome} ${c.contato}`.toLowerCase().includes(clientSearch.toLowerCase()));
     return <div className="card"><div className="toolbar"><h2>{filtered.length} clientes</h2><div className="filters"><input placeholder="Buscar nome ou contato" value={clientSearch} onChange={(e) => setClientSearch(e.target.value)} /><button className="btn primary" onClick={() => { setClientForm(emptyClient); setEditingClient(null); setModal("client"); }}>Novo</button></div></div><div className="list">{filtered.map((c) => <div className="list-row" key={c.id}><div><strong>{c.nome}</strong><p className="muted">{c.contato} {c.email && `- ${c.email}`}</p></div><div className="icon-actions"><IconButton title="Editar" onClick={() => { setClientForm(c); setEditingClient(c.id); setModal("client"); }}><Pencil /></IconButton><IconButton danger title="Excluir" onClick={() => deleteRow("clientes", c.id)}><Trash2 /></IconButton></div></div>)}</div></div>;
   }
 
-  function ClientModal() {
+  function renderClientModal() {
     return <Modal title={editingClient ? "Editar cliente" : "Novo cliente"} onClose={() => setModal(null)}><form className="grid" onSubmit={saveClient}><div className="form-grid">{["nome", "contato", "email"].map((k) => <Field key={k} label={{ nome: "Nome", contato: "Contato (WhatsApp/telefone)", email: "Email" }[k]}><input value={clientForm[k] || ""} onChange={(e) => setClientForm({ ...clientForm, [k]: e.target.value })} required={k === "nome"} /></Field>)}<Field label="Preferências" full><textarea value={clientForm.preferencias || ""} onChange={(e) => setClientForm({ ...clientForm, preferencias: e.target.value })} /></Field><Field label="Observações" full><textarea value={clientForm.observacoes || ""} onChange={(e) => setClientForm({ ...clientForm, observacoes: e.target.value })} /></Field></div><button className="btn primary full">{editingClient ? "Salvar cliente" : "Cadastrar"}</button></form></Modal>;
   }
 
-  function Goals() {
+  function renderGoals() {
     return <div className="card"><div className="toolbar"><h2>Metas</h2><button className="btn primary" onClick={() => setModal("goal")}><Plus size={17} /> Nova meta</button></div><div className="list">{goals.map((g) => { const done = goalProgress(g); const pct = Math.min(100, (done / Math.max(1, num(g.valor_alvo))) * 100); return <div className="list-row" key={g.id}><div className="grow"><strong>{g.tipo} - {g.periodo}</strong><p className="muted">{g.descricao || "Sem descrição"} - {fmtMoney(done)} de {fmtMoney(g.valor_alvo)}</p><div className="progress"><span style={{ "--progress": `${pct}%` }} /></div></div><IconButton danger title="Excluir" onClick={() => deleteRow("metas", g.id)}><Trash2 /></IconButton></div>; })}</div></div>;
   }
 
-  function GoalModal() {
+  function renderGoalModal() {
     return <Modal title="Nova meta" onClose={() => setModal(null)}><form className="grid" onSubmit={saveGoal}><div className="form-grid"><Field label="Tipo"><select value={goalForm.tipo} onChange={(e) => setGoalForm({ ...goalForm, tipo: e.target.value })}>{["Faturamento R$", "Número de vendas", "Novos clientes"].map((x) => <option key={x}>{x}</option>)}</select></Field><Field label="Período"><select value={goalForm.periodo} onChange={(e) => setGoalForm({ ...goalForm, periodo: e.target.value })}>{["Diário", "Semanal", "Mensal", "Anual"].map((x) => <option key={x}>{x}</option>)}</select></Field><Field label="Valor-alvo"><input type="number" step="0.01" value={goalForm.valor_alvo} onChange={(e) => setGoalForm({ ...goalForm, valor_alvo: e.target.value })} /></Field><Field label="Descrição" full><textarea value={goalForm.descricao} onChange={(e) => setGoalForm({ ...goalForm, descricao: e.target.value })} /></Field></div><button className="btn primary full">Criar meta</button></form></Modal>;
   }
 
-  function Cash() {
+  function renderCash() {
     return <section className="grid two-col"><div className="card"><div className="toolbar"><h2>Fluxo de Caixa</h2><input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} /></div><h2>Saldo total: {fmtMoney(cashBalance)}</h2><div className="table-wrap"><table><thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Valor</th></tr></thead><tbody>{[...monthSales.map((s) => ({ data: s.criado_em, descricao: `Venda ${s.id.slice(0, 8)}`, tipo: "entrada", valor: s.total })), ...manualCash].map((l, idx) => <tr key={idx}><td>{dateBR(l.data || l.criado_em)}</td><td>{l.descricao}</td><td>{l.tipo}</td><td>{fmtMoney(l.valor)}</td></tr>)}</tbody></table></div></div><form className="card grid" onSubmit={saveCash}><h2>Novo lançamento</h2><Field label="Tipo"><select value={cashForm.tipo} onChange={(e) => setCashForm({ ...cashForm, tipo: e.target.value })}><option>entrada</option><option>saída</option></select></Field><Field label="Descrição"><input value={cashForm.descricao} onChange={(e) => setCashForm({ ...cashForm, descricao: e.target.value })} required /></Field><Field label="Valor"><input type="number" step="0.01" value={cashForm.valor} onChange={(e) => setCashForm({ ...cashForm, valor: e.target.value })} /></Field><Field label="Data"><input type="date" value={cashForm.data} onChange={(e) => setCashForm({ ...cashForm, data: e.target.value })} /></Field><button className="btn primary">Adicionar</button></form></section>;
   }
 
-  function Dre() {
+  function renderDre() {
     return <div className="card"><div className="toolbar"><h2>Demonstrativo de Resultado</h2><input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} /></div><div className="list">{[["Receita Bruta", dreRevenue], ["Descontos", 0], ["Receita Líquida", dreRevenue], ["Custos", dreCosts], ["Lucro Bruto", dreRevenue - dreCosts], ["Despesas / Taxas", dreFees], ["Lucro Líquido", dreRevenue - dreCosts - dreFees]].map(([label, value]) => <div className="list-row" key={label}><span>{label}</span><strong>{fmtMoney(value)}</strong></div>)}</div></div>;
   }
 
-  function Insights() {
+  function renderInsights() {
     const monthly = new Map();
     for (const s of sales) monthly.set(monthKey(s.criado_em), (monthly.get(monthKey(s.criado_em)) || 0) + num(s.total));
     const maxMonthly = Math.max(1, ...[...monthly.values()]);
-    return <div className="grid main-grid">{BestSellers()}<div className="card"><h2>Faturamento por mês</h2><div className="chart" style={{ "--bars": monthly.size || 1 }}>{[...monthly.entries()].map(([label, total]) => <div className="bar-wrap" key={label}><div className="bar" data-tip={`${label} - ${fmtMoney(total)}`} style={{ height: `${Math.max(5, total / maxMonthly * 100)}%` }} /><span className="bar-label">{label}</span></div>)}</div><p className="muted">Ticket médio: {fmtMoney(sales.reduce((s, x) => s + num(x.total), 0) / Math.max(1, sales.length))}</p></div><div className="card"><h2>Vendas por forma de pagamento</h2><div className="list">{["Pix", "Crédito", "Débito", "Dinheiro"].map((p) => <div className="list-row" key={p}><span>{p}</span><strong>{sales.filter((s) => s.forma_pagamento === p).length}</strong></div>)}</div></div></div>;
+    return <div className="grid main-grid">{renderBestSellers()}<div className="card"><h2>Faturamento por mês</h2><div className="chart" style={{ "--bars": monthly.size || 1 }}>{[...monthly.entries()].map(([label, total]) => <div className="bar-wrap" key={label}><div className="bar" data-tip={`${label} - ${fmtMoney(total)}`} style={{ height: `${Math.max(5, total / maxMonthly * 100)}%` }} /><span className="bar-label">{label}</span></div>)}</div><p className="muted">Ticket médio: {fmtMoney(sales.reduce((s, x) => s + num(x.total), 0) / Math.max(1, sales.length))}</p></div><div className="card"><h2>Vendas por forma de pagamento</h2><div className="list">{["Pix", "Crédito", "Débito", "Dinheiro"].map((p) => <div className="list-row" key={p}><span>{p}</span><strong>{sales.filter((s) => s.forma_pagamento === p).length}</strong></div>)}</div></div></div>;
   }
 
-  function SettingsView() {
+  function renderSettingsView() {
     return <form className="card grid" onSubmit={saveSettings}><h2>Configurações</h2><div className="form-grid"><Field label="Nome do negócio"><input value={settings.nome_negocio || ""} onChange={(e) => setSettings({ ...settings, nome_negocio: e.target.value })} /></Field><Field label="Nome do usuário"><input value={settings.nome_usuario || ""} onChange={(e) => setSettings({ ...settings, nome_usuario: e.target.value })} /></Field>{[["taxa_credito", "Taxa Crédito (%)"], ["taxa_debito", "Taxa Débito (%)"], ["taxa_pix", "Taxa Pix (%)"], ["taxa_dinheiro", "Taxa Dinheiro (%)"]].map(([k, label]) => <Field key={k} label={label}><input type="number" step="0.01" value={settings[k] || 0} onChange={(e) => setSettings({ ...settings, [k]: e.target.value })} /></Field>)}</div><button className="btn primary full">Salvar configurações</button></form>;
   }
 
-  function SalesTable({ title, rows }) {
+  function renderSalesTable({ title, rows }) {
     return <div className="card"><h2>{title}</h2><div className="table-wrap"><table><thead><tr><th>Cliente</th><th>Produto</th><th>Valor</th><th>Pagamento</th><th>Data</th></tr></thead><tbody>{rows.map((s) => <tr key={s.id}><td>{s.clientes?.nome || clientById[s.cliente_id]?.nome || "Cliente avulso"}</td><td>{(s.itens_venda || []).map((it) => it.produtos?.nome).filter(Boolean).join(", ") || "-"}</td><td>{fmtMoney(s.total)}</td><td>{s.forma_pagamento}</td><td>{dateBR(s.criado_em)}</td></tr>)}</tbody></table></div></div>;
   }
 
-  function RecentSales() {
-    return SalesTable({ title: "Últimas vendas", rows: sales.slice(0, 5) });
+  function renderRecentSales() {
+    return renderSalesTable({ title: "Últimas vendas", rows: sales.slice(0, 5) });
   }
 
-  function BestSellers() {
+  function renderBestSellers() {
     return <div className="card"><h2>Mais vendidos</h2><div className="list">{bestSellers.length ? bestSellers.map((p) => <div className="list-row" key={p.nome}><span>{p.nome}</span><strong>{p.qtd}</strong></div>) : <p className="empty">Sem vendas registradas.</p>}</div></div>;
   }
 }
