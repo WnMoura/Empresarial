@@ -134,7 +134,7 @@ export default function App() {
   async function loadAll() {
     if (!hasSupabaseEnv) {
       setLoading(false);
-      setError("Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY em um arquivo .env.local.");
+      setError("");
       return;
     }
     setLoading(true);
@@ -447,22 +447,24 @@ export default function App() {
     );
   }
 
-  return (
-    <Shell>
-      {active === "dashboard" && <Dashboard />}
-      {active === "pricing" && <Pricing />}
-      {active === "stock" && <Stock />}
-      {active === "clients" && <Clients />}
-      {active === "goals" && <Goals />}
-      {active === "cash" && <Cash />}
-      {active === "dre" && <Dre />}
-      {active === "insights" && <Insights />}
-      {active === "settings" && <SettingsView />}
-      {modal === "sale" && <SaleModal />}
-      {modal === "client" && <ClientModal />}
-      {modal === "goal" && <GoalModal />}
-    </Shell>
-  );
+  return Shell({
+    children: (
+      <>
+        {active === "dashboard" && Dashboard()}
+        {active === "pricing" && Pricing()}
+        {active === "stock" && Stock()}
+        {active === "clients" && Clients()}
+        {active === "goals" && Goals()}
+        {active === "cash" && Cash()}
+        {active === "dre" && Dre()}
+        {active === "insights" && Insights()}
+        {active === "settings" && SettingsView()}
+        {modal === "sale" && SaleModal()}
+        {modal === "client" && ClientModal()}
+        {modal === "goal" && GoalModal()}
+      </>
+    ),
+  });
 
   function Dashboard() {
     const bars = chartData();
@@ -470,21 +472,21 @@ export default function App() {
     return (
       <div className="grid">
         <section className="grid metrics">
-          <Metric label="Vendas do dia" value={`${todaySales.length} vendas`} sub={fmtMoney(totals.revenue)} />
-          <Metric label="Valor em caixa (estoque)" value={fmtMoney(totals.stockValue)} sub={`${products.length} produtos`} />
-          <Metric label="Lucro bruto (dia)" value={fmtMoney(totals.gross)} sub="Receita - custo" />
-          <Metric danger label="Lucro líquido (dia)" value={fmtMoney(totals.net)} sub={`Taxas: ${fmtMoney(totals.fees)}`} />
+          {Metric({ label: "Vendas do dia", value: `${todaySales.length} vendas`, sub: fmtMoney(totals.revenue) })}
+          {Metric({ label: "Valor em caixa (estoque)", value: fmtMoney(totals.stockValue), sub: `${products.length} produtos` })}
+          {Metric({ label: "Lucro bruto (dia)", value: fmtMoney(totals.gross), sub: "Receita - custo" })}
+          {Metric({ danger: true, label: "Lucro líquido (dia)", value: fmtMoney(totals.net), sub: `Taxas: ${fmtMoney(totals.fees)}` })}
         </section>
         <section className="grid main-grid">
           <div className="card">
-            <div className="toolbar"><h2>Vendas por período</h2><Segment value={chartMode} setValue={setChartMode} options={["Dia", "Semana", "Mês"]} /></div>
+            <div className="toolbar"><h2>Vendas por período</h2>{Segment({ value: chartMode, setValue: setChartMode, options: ["Dia", "Semana", "Mês"] })}</div>
             <div className="chart" style={{ "--bars": bars.length }}>
               {bars.map((b) => <div className="bar-wrap" key={b.label}><div className="bar" data-tip={`${b.label} - ${fmtMoney(b.total)}`} style={{ height: `${Math.max(5, (b.total / max) * 100)}%` }} /><span className="bar-label">{b.label}</span></div>)}
             </div>
           </div>
           <div className="card"><h2>Formas de pagamento (hoje)</h2><div className="list">{paymentTotals.map((p) => <div className="list-row" key={p.method}><div><strong>{p.method}</strong><p className="muted">Taxa: {p.rate}%</p></div><strong>{fmtMoney(p.total)}</strong></div>)}</div></div>
         </section>
-        <SalesTable title="Últimas vendas" rows={sales.slice(0, 10)} />
+        {SalesTable({ title: "Últimas vendas", rows: sales.slice(0, 10) })}
       </div>
     );
   }
@@ -502,11 +504,11 @@ export default function App() {
       <section className="grid two-col">
         <form className="card" onSubmit={saveProduct}>
           <div className="toolbar"><h2>{editingProduct ? "Editar produto" : "Novo produto"}</h2>{editingProduct && <button className="btn" type="button" onClick={() => { setEditingProduct(null); setProductForm(emptyProduct); }}>Cancelar edição</button>}</div>
-          <ProductFields />
+          {ProductFields()}
           <p className="muted">Margem real estimada: <strong>{realMargin().toFixed(1)}%</strong></p>
           <button className="btn primary full" type="submit">{editingProduct ? "Salvar alterações" : "Cadastrar produto"}</button>
         </form>
-        <div className="card"><h2>Produtos cadastrados ({products.length})</h2><ProductList /></div>
+        <div className="card"><h2>Produtos cadastrados ({products.length})</h2>{ProductList()}</div>
       </section>
     );
   }
@@ -543,9 +545,9 @@ export default function App() {
             <select value={stockFilters.status} onChange={(e) => setStockFilters({ ...stockFilters, status: e.target.value })}><option value="">Todos status</option><option>Em estoque</option><option>Sem estoque</option><option>Estoque baixo</option></select>
             <select value={stockFilters.sort} onChange={(e) => setStockFilters({ ...stockFilters, sort: e.target.value })}><option value="nome">Nome</option><option value="estoque">Estoque</option></select>
           </div>
-          <ProductsTable rows={filteredProducts} />
+          {ProductsTable({ rows: filteredProducts })}
         </div>
-        <div className="grid"><BestSellers /><RecentSales small /></div>
+        <div className="grid">{BestSellers()}{RecentSales({ small: true })}</div>
       </section>
     );
   }
@@ -604,7 +606,7 @@ export default function App() {
     const monthly = new Map();
     for (const s of sales) monthly.set(monthKey(s.criado_em), (monthly.get(monthKey(s.criado_em)) || 0) + num(s.total));
     const maxMonthly = Math.max(1, ...[...monthly.values()]);
-    return <div className="grid main-grid"><BestSellers /><div className="card"><h2>Faturamento por mês</h2><div className="chart" style={{ "--bars": monthly.size || 1 }}>{[...monthly.entries()].map(([label, total]) => <div className="bar-wrap" key={label}><div className="bar" data-tip={`${label} - ${fmtMoney(total)}`} style={{ height: `${Math.max(5, total / maxMonthly * 100)}%` }} /><span className="bar-label">{label}</span></div>)}</div><p className="muted">Ticket médio: {fmtMoney(sales.reduce((s, x) => s + num(x.total), 0) / Math.max(1, sales.length))}</p></div><div className="card"><h2>Vendas por forma de pagamento</h2><div className="list">{["Pix", "Crédito", "Débito", "Dinheiro"].map((p) => <div className="list-row" key={p}><span>{p}</span><strong>{sales.filter((s) => s.forma_pagamento === p).length}</strong></div>)}</div></div></div>;
+    return <div className="grid main-grid">{BestSellers()}<div className="card"><h2>Faturamento por mês</h2><div className="chart" style={{ "--bars": monthly.size || 1 }}>{[...monthly.entries()].map(([label, total]) => <div className="bar-wrap" key={label}><div className="bar" data-tip={`${label} - ${fmtMoney(total)}`} style={{ height: `${Math.max(5, total / maxMonthly * 100)}%` }} /><span className="bar-label">{label}</span></div>)}</div><p className="muted">Ticket médio: {fmtMoney(sales.reduce((s, x) => s + num(x.total), 0) / Math.max(1, sales.length))}</p></div><div className="card"><h2>Vendas por forma de pagamento</h2><div className="list">{["Pix", "Crédito", "Débito", "Dinheiro"].map((p) => <div className="list-row" key={p}><span>{p}</span><strong>{sales.filter((s) => s.forma_pagamento === p).length}</strong></div>)}</div></div></div>;
   }
 
   function SettingsView() {
@@ -616,7 +618,7 @@ export default function App() {
   }
 
   function RecentSales() {
-    return <SalesTable title="Últimas vendas" rows={sales.slice(0, 5)} />;
+    return SalesTable({ title: "Últimas vendas", rows: sales.slice(0, 5) });
   }
 
   function BestSellers() {
